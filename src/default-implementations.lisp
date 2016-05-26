@@ -27,7 +27,9 @@ It is safe to call repeatedly."
   nil)
 
 (defdfun make-thread (function &key name
-                      (initial-bindings *default-special-bindings*))
+                      (dynamic-context
+                       (or *dynamic-context*
+                           (make-default-dynamic-context))))
   "Creates and returns a thread named NAME, which will call the
   function FUNCTION with no arguments: when FUNCTION returns, the
   thread terminates. NAME defaults to \"Anonymous thread\" if unsupplied.
@@ -54,7 +56,7 @@ It is safe to call repeatedly."
     implementation-defined. Portable code should not depend on
     particular behaviour in this case, nor should it assign to such
     variables without first rebinding them in the new thread."
-  (%make-thread (binding-default-specials function initial-bindings)
+  (%make-thread (binding-defaults function dynamic-context)
                 (or name "Anonymous thread")))
 
 (defdfun %make-thread (function name)

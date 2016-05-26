@@ -61,29 +61,52 @@ Distributed under the MIT license (see LICENSE file)
   (and (null (set-difference set-a set-b))
        (null (set-difference set-b set-a))))
 
-(test default-special-bindings
+(test default-special-bindings/*default-special-bindings*
   (locally (declare (special *a* *c*))
     (let* ((the-as 50) (the-bs 150) (*b* 42)
-           some-a some-b some-other-a some-other-b
-           (*default-special-bindings*
-            `((*a* . (funcall ,(lambda () (incf the-as))))
-              (*b* . (funcall ,(lambda () (incf the-bs))))
-              ,@*default-special-bindings*))
-           (threads (list (make-thread
-                           (lambda ()
-                             (setf some-a *a* some-b *b*)))
-                          (make-thread
-                           (lambda ()
-                             (setf some-other-a *a*
-                                   some-other-b *b*))))))
+           some-a some-b some-other-a some-other-b)
       (declare (special *b*))
-      (thread-yield)
-      (is (not (boundp '*a*)))
-      (loop while (some #'thread-alive-p threads)
-            do (thread-yield))
-      (is (set-equal (list some-a some-other-a) '(51 52)))
-      (is (set-equal (list some-b some-other-b) '(151 152)))
-      (is (not (boundp '*a*))))))
+      (let ((*default-special-bindings*
+              `((*a* . (funcall ,(lambda () (incf the-as))))
+                (*b* . (funcall ,(lambda () (incf the-bs))))
+                ,@*default-special-bindings*)))
+        (let ((threads (list (make-thread
+                              (lambda ()
+                                (setf some-a *a* some-b *b*)))
+                             (make-thread
+                              (lambda ()
+                                (setf some-other-a *a*
+                                      some-other-b *b*))))))
+          (thread-yield)
+          (is (not (boundp '*a*)))
+          (loop while (some #'thread-alive-p threads)
+                do (thread-yield))
+          (is (set-equal (list some-a some-other-a) '(51 52)))
+          (is (set-equal (list some-b some-other-b) '(151 152)))
+          (is (not (boundp '*a*))))))))
+
+(test default-special-bindings/with-dynamic-context
+  (locally (declare (special *a* *c*))
+    (let* ((the-as 50) (the-bs 150) (*b* 42)
+           some-a some-b some-other-a some-other-b)
+      (declare (special *b*))
+      (with-dynamic-context (:initial-bindings
+                             `((*a* . (funcall ,(lambda () (incf the-as))))
+                               (*b* . (funcall ,(lambda () (incf the-bs))))))
+        (let ((threads (list (make-thread
+                              (lambda ()
+                                (setf some-a *a* some-b *b*)))
+                             (make-thread
+                              (lambda ()
+                                (setf some-other-a *a*
+                                      some-other-b *b*))))))
+          (thread-yield)
+          (is (not (boundp '*a*)))
+          (loop while (some #'thread-alive-p threads)
+                do (thread-yield))
+          (is (set-equal (list some-a some-other-a) '(51 52)))
+          (is (set-equal (list some-b some-other-b) '(151 152)))
+          (is (not (boundp '*a*))))))))
 
 
 (defparameter *shared* 0)

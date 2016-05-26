@@ -8,6 +8,9 @@
   (:export #:thread #:make-thread #:current-thread #:threadp #:thread-name
            #:start-multiprocessing
            #:*default-special-bindings* #:*standard-io-bindings*
+           #:*dynamic-context* #:dynamic-context #:make-dynamic-context
+           #:dynamic-context-special-bindings #:dynamic-context-wrapper
+           #:with-dynamic-context
            #:*supports-threads-p*
 
            #:lock #:make-lock #:lock-p

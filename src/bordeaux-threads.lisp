@@ -50,7 +50,9 @@ Distributed under the MIT license (see LICENSE file)
 
 ;; Forms are evaluated in the new thread or in the calling thread?
 (defvar *default-special-bindings* nil
-  "This variable holds an alist associating special variable symbols
+  "DEPRECATED: see *DYNAMIC-CONTEXT*.
+
+  This variable holds an alist associating special variable symbols
   to forms to evaluate. Special variables named in this list will
   be locally bound in the new thread before it begins executing user code.
 
@@ -93,14 +95,53 @@ Distributed under the MIT license (see LICENSE file)
   (*read-suppress*             nil)
   (*readtable*                 (copy-readtable nil)))
 
-(defun binding-default-specials (function special-bindings)
+(defun binding-defaults (function context)
   "Return a closure that binds the symbols in SPECIAL-BINDINGS and calls
 FUNCTION."
-  (let ((specials (remove-duplicates special-bindings :from-end t :key #'car)))
+  (let ((specials (remove-duplicates (dynamic-context-special-bindings context)
+                                     :from-end t :key #'car)))
     (lambda ()
       (progv (mapcar #'car specials)
           (loop for (nil . form) in specials collect (eval form))
-        (funcall function)))))
+        (let ((wrapper (dynamic-context-wrapper context)))
+          (if wrapper
+              (funcall wrapper function)
+              (funcall function)))))))
+
+(defstruct dynamic-context
+  "The dynamic context of a thread:
+ * SPECIAL-BINDINGS: an alist associating special variable symbols
+  to forms to evaluate. Special variables named in this list will
+  be locally bound in the new thread before it begins executing user code.
+ * WRAPPER: a thunk that will call the next wrapper, until the thread
+  initial functon. It can establish restarts, condition handlers, etc..."
+  (special-bindings nil :type list :read-only t)
+  (wrapper nil :type (or null function) :read-only t))
+
+(defun make-default-dynamic-context ()
+  (make-dynamic-context :special-bindings *default-special-bindings*))
+
+(defun enhance-dynamic-context (context special-bindings wrapper)
+  (let ((context (or context (make-default-dynamic-context))))
+    (make-dynamic-context
+     :special-bindings (append special-bindings
+                               (dynamic-context-special-bindings
+                                context))
+     :wrapper (let ((inner-wrapper (dynamic-context-wrapper context)))
+                (if wrapper
+                    (lambda (function)
+                      (funcall wrapper (lambda () (funcall inner-wrapper function))))
+                    inner-wrapper)))))
+
+(defparameter *dynamic-context* nil
+  "The default context of new threads.")
+
+(defmacro with-dynamic-context ((&key initial-bindings wrapper) &body body)
+  "WITH-DYNAMIC-CONTEXT defines a new thread creation context."
+  `(let ((*dynamic-context*
+           (enhance-dynamic-context *dynamic-context* ,initial-bindings ,wrapper)))
+     ,@body))
+
 
 ;;; FIXME: This test won't work if CURRENT-THREAD
 ;;;        conses a new object each time
