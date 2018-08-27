@@ -67,7 +67,7 @@ It is safe to call repeatedly."
   "Returns the thread object for the calling
   thread. This is the same kind of object as would be returned by
   MAKE-THREAD."
-  nil)
+  (raise-threading-support-error))
 
 (defdfun threadp (object)
   "Returns true if object is a thread, otherwise NIL."
@@ -77,7 +77,7 @@ It is safe to call repeatedly."
 (defdfun thread-name (thread)
   "Returns the name of the thread, as supplied to MAKE-THREAD."
   (declare (ignore thread))
-  "Main thread")
+  (raise-threading-support-error))
 
 ;;; Resource contention: locks and recursive locks
 
@@ -114,7 +114,7 @@ It is safe to call repeatedly."
   that require locks to be safe when acquired recursively, see instead
   MAKE-RECURSIVE-LOCK and friends."
   (declare (ignore lock wait-p))
-  t)
+  (raise-threading-support-error))
 
 (defdfun release-lock (lock)
   "Release LOCK. It is an error to call this unless
@@ -124,7 +124,7 @@ It is safe to call repeatedly."
 
   This function has no interesting return value."
   (declare (ignore lock))
-  (values))
+  (raise-threading-support-error))
 
 (defdmacro with-lock-held ((place) &body body)
   "Evaluates BODY with the lock named by PLACE, the value of which
@@ -156,14 +156,14 @@ It is safe to call repeatedly."
 (defdfun acquire-recursive-lock (lock)
   "As for ACQUIRE-LOCK, but for recursive locks."
   (declare (ignore lock))
-  t)
+  (raise-threading-support-error))
 
 (defdfun release-recursive-lock (lock)
   "Release the recursive LOCK. The lock will only
   become free after as many Release operations as there have been
   Acquire operations. See RELEASE-LOCK for other information."
   (declare (ignore lock))
-  (values))
+  (raise-threading-support-error))
 
 (defdmacro with-recursive-lock-held ((place &key timeout) &body body)
   "Evaluates BODY with the recursive lock named by PLACE, which is a
@@ -271,7 +271,7 @@ WITH-LOCK-HELD etc etc"
   CONDITION-NOTIFY has no useful return value. In an implementation
   that does not support multiple threads, it has no effect."
   (declare (ignore condition-variable))
-  (values))
+  (raise-threading-support-error))
 
 ;;; Resource contention: semaphores
 

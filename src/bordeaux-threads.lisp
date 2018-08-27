@@ -32,6 +32,9 @@ Distributed under the MIT license (see LICENSE file)
                   "There is no support for this method on this implementation."
                   "There is no thread support in this instance."))))
 
+(defun raise-threading-support-error ()
+  (error (make-threading-support-error)))
+
 ;;; Timeouts
 
 #-sbcl
